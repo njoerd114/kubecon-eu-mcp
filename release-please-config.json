@@ -3,13 +3,7 @@
     ".": {
       "release-type": "python",
       "package-name": "kubecon-eu-mcp",
-      "bump-minor-pre-major": true,
-      "extra-files": [
-        {
-          "type": "generic",
-          "path": "pyproject.toml"
-        }
-      ]
+      "bump-minor-pre-major": true
     }
   }
 }
