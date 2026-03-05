@@ -6,6 +6,7 @@ on:
 
 permissions:
   id-token: write  # Required for trusted publishing (OIDC)
+  contents: read   # Required for actions/checkout to read repository contents
 
 jobs:
   publish:
