@@ -1,0 +1,33 @@
+[project]
+name = "kubecon-eu-mcp"
+version = "0.1.0"
+description = "MCP server for KubeCon + CloudNativeCon Europe 2026 — agentic schedule planner, party optimizer, and conference guide"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "KubeCon EU MCP Contributors" }]
+keywords = ["mcp", "kubecon", "cncf", "cloud-native", "conference"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "icalendar>=6.0.0",
+    "beautifulsoup4>=4.12.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+kubecon-eu-mcp = "kubecon_eu_mcp:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kubecon_eu_mcp"]
