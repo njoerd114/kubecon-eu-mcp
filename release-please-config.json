@@ -1,0 +1,9 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "package-name": "kubecon-eu-mcp",
+      "bump-minor-pre-major": true
+    }
+  }
+}
