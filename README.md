@@ -23,6 +23,7 @@ As a meta tie-in, this project highlights the **Agentics Day: MCP + Agents** co-
 - **Party Optimizer**: Find evening social events and plan the best route through Amsterdam.
 - **Logistics Guide**: Access hotel block info, airline discounts, and venue transit details.
 - **Agentic Planning**: Built-in prompts to help users build 4-day itineraries or first-timer guides.
+- **Session Scoring**: Personalized session ranking using the scoring rubric from [kubecon-event-scorer](https://github.com/FredrikCarlssn/kubecon-event-scorer) by Fredrik Carlsson — scores across role relevance, topic alignment, and strategic value.
 - **Live Updates**: Data is pulled directly from official sources to reflect last-minute room changes.
 
 ## Quick Start
