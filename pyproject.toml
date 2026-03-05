@@ -1,6 +1,6 @@
 [project]
 name = "kubecon-eu-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server for KubeCon + CloudNativeCon Europe 2026 — agentic schedule planner, party optimizer, and conference guide"
 readme = "README.md"
 license = "MIT"
