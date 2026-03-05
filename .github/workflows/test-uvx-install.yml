@@ -1,0 +1,75 @@
+name: Test uvx install
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: uv run --group dev pytest -v
+
+      - name: Build package
+        run: uv build
+
+      - name: Install via uvx (from built wheel)
+        run: |
+          WHEEL=$(ls dist/*.whl)
+          uv tool install "$WHEEL"
+
+      - name: Verify entry point exists
+        run: which kubecon-eu-mcp
+
+      - name: Smoke test — server starts without crash
+        run: |
+          # Pipe a blocking stdin so the stdio transport doesn't read EOF and exit
+          sleep infinity | kubecon-eu-mcp > /tmp/server.out 2>&1 &
+          SERVER_PID=$!
+
+          # Give it a few seconds to import and initialize
+          sleep 5
+
+          # Check if process is still alive (didn't crash on startup)
+          if kill -0 "$SERVER_PID" 2>/dev/null; then
+            echo "Server started successfully (PID $SERVER_PID)"
+            kill "$SERVER_PID" 2>/dev/null || true
+          else
+            echo "Server process died unexpectedly. Output:"
+            cat /tmp/server.out
+            exit 1
+          fi
+
+      - name: Verify uvx one-shot execution
+        run: |
+          # Uninstall the tool first to test fresh uvx invocation
+          uv tool uninstall kubecon-eu-mcp
+
+          WHEEL=$(ls dist/*.whl)
+          # uvx --from runs the entry point directly, closer to real user experience
+          # Pipe blocking stdin for the same reason as the smoke test
+          timeout 10 bash -c "sleep infinity | uvx --from \"$WHEEL\" kubecon-eu-mcp" || EXIT_CODE=$?
+
+          # timeout returns 124 when the process is killed after the deadline,
+          # which means the server was alive and running — that's a pass
+          if [ "${EXIT_CODE:-0}" -eq 124 ]; then
+            echo "uvx execution verified (server ran until timeout — expected)"
+          elif [ "${EXIT_CODE:-0}" -eq 0 ]; then
+            echo "uvx execution verified (server exited cleanly)"
+          else
+            echo "uvx execution failed with exit code ${EXIT_CODE}"
+            exit 1
+          fi
