@@ -1,0 +1,66 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.kubecon-eu-mcp/kubecon-eu-mcp",
+  "title": "KubeCon EU 2026 Conference Guide",
+  "description": "MCP server for KubeCon + CloudNativeCon Europe 2026 — agentic schedule planner, party optimizer, venue guide, and travel info. Fetches live data from sched.com and conferenceparties.com.",
+  "icon_url": "https://events.linuxfoundation.org/wp-content/uploads/2024/04/kceu26-black.svg",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "kubecon-eu-mcp",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "search_sessions",
+      "description": "Search conference sessions by topic, speaker, or keyword"
+    },
+    {
+      "name": "get_schedule",
+      "description": "Get the full schedule for a specific day"
+    },
+    {
+      "name": "find_speaker",
+      "description": "Find sessions by a specific speaker"
+    },
+    {
+      "name": "find_parties",
+      "description": "Find conference parties and social events"
+    },
+    {
+      "name": "plan_party_route",
+      "description": "Plan an optimized party-hopping route"
+    },
+    {
+      "name": "get_venue_info",
+      "description": "Venue details, room list, maps, transit"
+    },
+    {
+      "name": "get_hotel_info",
+      "description": "Conference hotel blocks with rates and distances"
+    },
+    {
+      "name": "get_travel_info",
+      "description": "Airport, transit, parking, airline discounts"
+    },
+    {
+      "name": "get_colocated_events",
+      "description": "Monday co-located events (ArgoCon, CiliumCon, Agentics Day, etc.)"
+    },
+    {
+      "name": "get_conference_overview",
+      "description": "High-level event overview and useful links"
+    },
+    {
+      "name": "score_sessions",
+      "description": "Get sessions with a personalized scoring rubric for AI-powered ranking"
+    },
+    {
+      "name": "detect_conflicts",
+      "description": "Check if selected sessions overlap in time"
+    }
+  ]
+}
