@@ -6,10 +6,10 @@ import re
 
 from bs4 import BeautifulSoup, Tag
 
-from kubecon_eu_mcp.models import Party
+from conference_mcp.models import Party
 
-# Map day headings to (day_key, date_str)
-_DAY_MAP = {
+# Default day map for KubeCon-style conferenceparties.com
+_DEFAULT_DAY_MAP = {
     "monday": ("monday", "March 23, 2026"),
     "tuesday": ("tuesday", "March 24, 2026"),
     "wednesday": ("wednesday", "March 25, 2026"),
@@ -22,16 +22,19 @@ def _clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _detect_day(text: str) -> tuple[str, str] | None:
+def _detect_day(text: str, day_map: dict | None = None) -> tuple[str, str] | None:
     """Detect which day a text refers to."""
+    mapping = day_map or _DEFAULT_DAY_MAP
     lower = text.lower().strip()
-    for key, (day, date) in _DAY_MAP.items():
+    for key, (day, date) in mapping.items():
         if key in lower:
             return day, date
     return None
 
 
-def parse_parties_html(html: str) -> list[Party]:
+def parse_parties_html(
+    html: str, day_map: dict | None = None
+) -> list[Party]:
     """Parse party listings from conferenceparties.com HTML.
 
     The page uses a single table containing ALL days. Day headings appear as
@@ -40,10 +43,13 @@ def parse_parties_html(html: str) -> list[Party]:
 
     Args:
         html: Raw HTML from conferenceparties.com
+        day_map: Optional day name → (day_key, date_str) mapping.
 
     Returns:
         List of Party objects.
     """
+    mapping = day_map or _DEFAULT_DAY_MAP
+
     soup = BeautifulSoup(html, "html.parser")
     parties: list[Party] = []
     current_day = ""
@@ -51,16 +57,15 @@ def parse_parties_html(html: str) -> list[Party]:
 
     table = soup.find("table")
     if not table:
-        return _parse_from_headings(soup)
+        return _parse_from_headings(soup, mapping)
 
     rows = table.find_all("tr")
     for row in rows:
         cells = row.find_all(["td", "th"])
         row_text = _clean_text(row.get_text())
 
-        # Detect day heading rows: single cell, or row text matches a day
         if len(cells) <= 2:
-            detected = _detect_day(row_text)
+            detected = _detect_day(row_text, mapping)
             if detected:
                 current_day, current_date = detected
             continue
@@ -68,7 +73,6 @@ def parse_parties_html(html: str) -> list[Party]:
         if len(cells) < 4:
             continue
 
-        # Skip header rows ("Time | Sponsor | ...")
         first_text = _clean_text(cells[0].get_text())
         if first_text.lower() in ("time", "") or not first_text:
             continue
@@ -78,12 +82,10 @@ def parse_parties_html(html: str) -> list[Party]:
         event_cell = cells[2]
         location_cell = cells[3]
 
-        # Extract event name and RSVP link
         link = event_cell.find("a")
         event_name = _clean_text(event_cell.get_text())
         rsvp_url = link["href"] if link and link.get("href") else ""
 
-        # Extract location
         location_text = _clean_text(location_cell.get_text())
 
         if not event_name or not time_text:
@@ -104,14 +106,16 @@ def parse_parties_html(html: str) -> list[Party]:
     return parties
 
 
-def _parse_from_headings(soup: BeautifulSoup) -> list[Party]:
+def _parse_from_headings(
+    soup: BeautifulSoup, day_map: dict
+) -> list[Party]:
     """Fallback parser using H2 headings and sibling elements."""
     parties: list[Party] = []
     current_day = ""
     current_date = ""
 
     for h2 in soup.find_all("h2"):
-        detected = _detect_day(h2.get_text())
+        detected = _detect_day(h2.get_text(), day_map)
         if not detected:
             continue
         current_day, current_date = detected

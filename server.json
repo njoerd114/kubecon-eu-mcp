@@ -1,15 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.kubecon-eu-mcp/kubecon-eu-mcp",
-  "title": "KubeCon EU 2026 Conference Guide",
-  "description": "MCP server for KubeCon + CloudNativeCon Europe 2026 — agentic schedule planner, party optimizer, venue guide, and travel info. Fetches live data from sched.com and conferenceparties.com.",
+  "name": "io.github.conference-mcp/conference-mcp",
+  "title": "Conference MCP — Agentic Conference Guide",
+  "description": "MCP server for tech conferences — agentic schedule planner, party optimizer, venue guide, and travel info. Supports KubeCon EU 2026 and ContainerDays Hamburg 2026. Use --conference to select the event.",
   "icon_url": "https://events.linuxfoundation.org/wp-content/uploads/2024/04/kceu26-black.svg",
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "kubecon-eu-mcp",
+      "identifier": "conference-mcp",
       "transport": {
-        "type": "stdio"
+        "type": "stdio",
+        "command": "conference-mcp",
+        "args": []
       }
     }
   ],
@@ -48,7 +50,7 @@
     },
     {
       "name": "get_colocated_events",
-      "description": "Monday co-located events (ArgoCon, CiliumCon, Agentics Day, etc.)"
+      "description": "Co-located events and workshops"
     },
     {
       "name": "get_conference_overview",

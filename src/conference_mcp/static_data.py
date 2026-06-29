@@ -1,14 +1,18 @@
-"""Static fallback data for venue, hotels, travel, and co-located events.
+"""Static data for all supported conferences.
 
-This data is hardcoded from the official KubeCon EU 2026 website and serves
-as a fallback when upstream sources are unreachable.
+Venue, hotels, co-located events, and schedule overviews are defined here.
+Live session data is fetched from upstream iCal / Sessionize feeds at runtime.
 """
 
 from __future__ import annotations
 
-from kubecon_eu_mcp.models import Hotel, VenueInfo, ColocatedEvent
+from conference_mcp.models import ColocatedEvent, Hotel, VenueInfo
 
-VENUE = VenueInfo(
+# =========================================================================
+# KubeCon + CloudNativeCon Europe 2026
+# =========================================================================
+
+KUBECON_VENUE = VenueInfo(
     name="RAI Amsterdam",
     address="Europaplein 24, 1078 GZ Amsterdam, Netherlands",
     description=(
@@ -55,7 +59,7 @@ VENUE = VenueInfo(
     },
 )
 
-HOTELS: list[Hotel] = [
+KUBECON_HOTELS: list[Hotel] = [
     Hotel(
         name="nhow Amsterdam RAI",
         address="Europaboulevard 2b, 1078 RV Amsterdam",
@@ -122,7 +126,7 @@ HOTELS: list[Hotel] = [
     ),
 ]
 
-COLOCATED_EVENTS: list[ColocatedEvent] = [
+KUBECON_COLOCATED_EVENTS: list[ColocatedEvent] = [
     ColocatedEvent(
         name="Agentics Day: MCP + Agents",
         duration="Half-Day (afternoon)",
@@ -238,7 +242,7 @@ COLOCATED_EVENTS: list[ColocatedEvent] = [
     ),
 ]
 
-SCHEDULE_OVERVIEW = {
+KUBECON_SCHEDULE_OVERVIEW = {
     "event": "KubeCon + CloudNativeCon Europe 2026",
     "dates": "23-26 March 2026",
     "location": "RAI Amsterdam, Netherlands",
@@ -260,7 +264,7 @@ SCHEDULE_OVERVIEW = {
     },
 }
 
-AIRLINE_DISCOUNTS = [
+KUBECON_AIRLINE_DISCOUNTS = [
     {
         "airline": "United Airlines",
         "code": "ZRQ5172168",
@@ -276,3 +280,90 @@ AIRLINE_DISCOUNTS = [
         "phone": "1-800-328-1111 (Mon-Fri 8am-6:30pm EST, no booking fee)",
     },
 ]
+
+# =========================================================================
+# ContainerDays Hamburg 2026
+# =========================================================================
+
+CDS_VENUE = VenueInfo(
+    name="MS Bleichen",
+    address="Hamburg, Germany",
+    description=(
+        "ContainerDays Hamburg 2026 takes place aboard the MS Bleichen, "
+        "a permanently moored event ship in Hamburg's harbor. The venue features "
+        "6 tracks across multiple decks and offers a unique waterfront conference experience. "
+        "AIContext runs as a co-located track alongside the main ContainerDays program."
+    ),
+    rooms=[
+        "Room 1: Main Track",
+        "Room 2: Platform Engineering Track",
+        "Room 3: Cloud Native Experience & Golang Track",
+        "Room 4: Security Track",
+        "MS Bleichen: Mixed Track",
+        "Room 5: AIContext Track",
+    ],
+    transit={
+        "closest_station": "Hamburg S-Bahn / U-Bahn (various stations, see venue site)",
+        "from_airport": "Hamburg Airport (HAM) — ~25 min by S-Bahn to city center",
+        "public_transport": "HVV S-Bahn, U-Bahn, and bus network — tickets via hvv app",
+        "hvv_app": "https://www.hvv.de/en",
+        "venue_directions": "https://www.containerdays.io/containerdays-hamburg-2026/location/",
+    },
+    parking="Check venue website for parking availability",
+    maps={
+        "venue_page": "https://www.containerdays.io/containerdays-hamburg-2026/location/",
+        "official_site": "https://www.containerdays.io/containerdays-hamburg-2026/",
+    },
+)
+
+CDS_HOTELS: list[Hotel] = [
+    Hotel(
+        name="Near Hamburg HafenCity / City Center",
+        address="Check booking.com or hotels.com for current rates",
+        distance_to_venue="Varies — use venue page for best areas",
+        rate_from="Varies",
+        rating="Varies",
+        url="https://www.containerdays.io/containerdays-hamburg-2026/location/",
+        availability="Check availability",
+    ),
+]
+
+CDS_WORKSHOPS: list[ColocatedEvent] = [
+    ColocatedEvent(
+        name="ContainerDays Main Conference",
+        duration="Multi-Day",
+        location="MS Bleichen (all tracks)",
+        requires="CONFERENCE PASS",
+        url="https://www.containerdays.io/containerdays-hamburg-2026/tickets/",
+        description="Three days of talks across 6 tracks: Main, Platform Engineering, Cloud Native & Golang, Security, Mixed, and AIContext.",
+    ),
+    ColocatedEvent(
+        name="AIContext Track",
+        duration="Multi-Day",
+        location="Room 5: AIContext Track",
+        requires="CONFERENCE PASS",
+        url="https://www.containerdays.io/containerdays-hamburg-2026/agenda/",
+        description="Dedicated AI track running alongside ContainerDays covering AI agents, MCP, LLMs, and ML infrastructure.",
+    ),
+]
+
+CDS_SCHEDULE_OVERVIEW = {
+    "event": "ContainerDays Hamburg 2026",
+    "dates": "September 2-4, 2026",
+    "location": "MS Bleichen, Hamburg, Germany",
+    "timezone": "CEST (Central European Summer Time, UTC+2)",
+    "hashtags": ["#ContainerDays", "#CDS2026", "#AIContext"],
+    "schedule_at_a_glance": {
+        "wednesday": "Registration (8:30 AM), Opening Remarks, Sessions across 6 tracks, Kelsey Hightower Keynote (1:30 PM), Evening Event (6:05 PM)",
+        "thursday": "Sessions across 6 tracks, Panel discussions, Exhibition Networking (4:10 PM)",
+        "friday": "Sessions across 6 tracks, Coffee Breaks, Exhibition Networking — conference closes ~2 PM",
+    },
+    "useful_links": {
+        "schedule": "https://www.containerdays.io/containerdays-hamburg-2026/agenda/",
+        "registration": "https://www.containerdays.io/containerdays-hamburg-2026/tickets/",
+        "speakers": "https://www.containerdays.io/containerdays-hamburg-2026/speakers/",
+        "venue": "https://www.containerdays.io/containerdays-hamburg-2026/location/",
+        "partners": "https://www.containerdays.io/containerdays-hamburg-2026/partners/",
+        "code_of_conduct": "https://www.containerdays.io/code-of-conduct/",
+    },
+}

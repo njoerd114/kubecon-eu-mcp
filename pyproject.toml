@@ -1,12 +1,12 @@
 [project]
-name = "kubecon-eu-mcp"
-version = "0.2.1"
-description = "MCP server for KubeCon + CloudNativeCon Europe 2026 — agentic schedule planner, party optimizer, and conference guide"
+name = "conference-mcp"
+version = "0.3.0"
+description = "MCP server for tech conferences — agentic schedule planner, party optimizer, and conference guide. Supports KubeCon EU 2026 and ContainerDays Hamburg 2026."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-authors = [{ name = "KubeCon EU MCP Contributors" }]
-keywords = ["mcp", "kubecon", "cncf", "cloud-native", "conference"]
+authors = [{ name = "Conference MCP Contributors" }]
+keywords = ["mcp", "kubecon", "containerdays", "cncf", "cloud-native", "conference"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-kubecon-eu-mcp = "kubecon_eu_mcp:main"
+conference-mcp = "conference_mcp:main"
 
 [dependency-groups]
 dev = [
@@ -36,7 +36,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/kubecon_eu_mcp"]
+packages = ["src/conference_mcp"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
