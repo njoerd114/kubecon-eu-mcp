@@ -1,4 +1,4 @@
-"""Data models for KubeCon EU schedule, parties, venue, and travel."""
+"""Data models for conference schedule, parties, venue, and travel."""
 
 from __future__ import annotations
 
@@ -66,10 +66,14 @@ class VenueInfo:
     name: str
     address: str
     description: str
-    rooms: list[str]
-    transit: dict[str, str]
-    parking: str
-    maps: dict[str, str]
+    rooms: list[str] = field(default_factory=list)
+    transit: dict[str, str] = field(default_factory=dict)
+    parking: str = ""
+    maps: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def empty(cls) -> VenueInfo:
+        return cls(name="", address="", description="")
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -77,10 +81,10 @@ class VenueInfo:
 
 @dataclass
 class ColocatedEvent:
-    """A co-located event on Monday."""
+    """A co-located event or workshop day."""
 
     name: str
-    duration: str  # "Half-Day" | "Full-Day"
+    duration: str  # "Half-Day", "Full-Day", "Multi-Day"
     location: str
     requires: str  # "ALL ACCESS PASS" | "SEPARATE REGISTRATION"
     url: str

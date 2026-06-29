@@ -2,6 +2,8 @@
 
 This module owns all data access. The MCP server tools call methods here
 instead of touching parsers or static data directly.
+
+All upstream URLs and static data are driven by the active ConferenceConfig.
 """
 
 from __future__ import annotations
@@ -13,23 +15,13 @@ from typing import Any
 
 import httpx
 
-from kubecon_eu_mcp.ical_parser import parse_ical
-from kubecon_eu_mcp.models import Session, Party, Hotel, VenueInfo, ColocatedEvent
-from kubecon_eu_mcp.party_parser import parse_parties_html
-from kubecon_eu_mcp.static_data import (
-    VENUE,
-    HOTELS,
-    COLOCATED_EVENTS,
-    SCHEDULE_OVERVIEW,
-    AIRLINE_DISCOUNTS,
-)
+from conference_mcp.conferences import ConferenceConfig
+from conference_mcp.ical_parser import parse_ical
+from conference_mcp.models import Session, Party
+from conference_mcp.party_parser import parse_parties_html
+from conference_mcp.sessionize_parser import parse_sessionize_html
 
 logger = logging.getLogger(__name__)
-
-# Upstream URLs
-SCHEDULE_ICAL_URL = "https://kccnceu2026.sched.com/all.ics"
-COLOCATED_ICAL_URL = "https://colocatedeventseu2026.sched.com/all.ics"
-PARTIES_URL = "https://conferenceparties.com/kubeconeu26/"
 
 # Cache TTLs (seconds)
 SCHEDULE_TTL = 3600  # 1 hour
@@ -52,7 +44,6 @@ class _Cache:
 
     @property
     def stale(self) -> bool:
-        """Data exists but is expired."""
         return self._data is not None and not self.valid
 
     def get(self) -> Any:
@@ -66,7 +57,8 @@ class _Cache:
 class DataService:
     """Central data service with upstream fetching, caching, and fallback."""
 
-    def __init__(self) -> None:
+    def __init__(self, config: ConferenceConfig) -> None:
+        self._config = config
         self._sessions_cache = _Cache(SCHEDULE_TTL)
         self._colocated_sessions_cache = _Cache(SCHEDULE_TTL)
         self._parties_cache = _Cache(PARTIES_TTL)
@@ -76,15 +68,19 @@ class DataService:
     # ------------------------------------------------------------------
 
     async def get_sessions(self, force_refresh: bool = False) -> list[Session]:
-        """Get all conference sessions (Tue-Thu).
+        """Get all main conference sessions.
 
         Priority: live iCal feed -> cached data -> empty list.
         """
         if self._sessions_cache.valid and not force_refresh:
             return self._sessions_cache.get()
 
+        url = self._config.schedule_ical_url
+        if not url:
+            return []
+
         try:
-            sessions = await self._fetch_sessions(SCHEDULE_ICAL_URL)
+            sessions = await self._fetch_sessions(url)
             self._sessions_cache.set(sessions)
             logger.info("Fetched %d sessions from upstream", len(sessions))
             return sessions
@@ -97,12 +93,16 @@ class DataService:
     async def get_colocated_sessions(
         self, force_refresh: bool = False
     ) -> list[Session]:
-        """Get Monday co-located event sessions."""
+        """Get co-located event / workshop day sessions."""
         if self._colocated_sessions_cache.valid and not force_refresh:
             return self._colocated_sessions_cache.get()
 
+        url = self._config.colocated_ical_url
+        if not url:
+            return []
+
         try:
-            sessions = await self._fetch_sessions(COLOCATED_ICAL_URL)
+            sessions = await self._fetch_sessions(url)
             self._colocated_sessions_cache.set(sessions)
             logger.info("Fetched %d co-located sessions from upstream", len(sessions))
             return sessions
@@ -121,12 +121,14 @@ class DataService:
     ) -> list[Session]:
         """Search sessions by keyword, optionally filtered by day and track."""
         sessions = await self.get_sessions()
-        if day:
-            all_sessions = sessions + (
-                await self.get_colocated_sessions() if day == "monday" else []
-            )
+        colocated = await self.get_colocated_sessions()
+
+        if day and day == self._config.day_names[0]:
+            all_sessions = colocated + sessions
+        elif day:
+            all_sessions = sessions + colocated
         else:
-            all_sessions = sessions + await self.get_colocated_sessions()
+            all_sessions = sessions + colocated
 
         query_lower = query.lower()
         results = []
@@ -137,7 +139,6 @@ class DataService:
             if track and track.lower() not in s.category.lower():
                 continue
 
-            # Search across title, description, speakers, category
             searchable = (
                 f"{s.title} {s.description} {' '.join(s.speakers)} {s.category}".lower()
             )
@@ -148,8 +149,10 @@ class DataService:
 
     async def get_schedule_for_day(self, day: str) -> list[Session]:
         """Get all sessions for a specific day."""
-        if day.lower() == "monday":
-            return await self.get_colocated_sessions()
+        if day.lower() == self._config.day_names[0]:
+            colocated = await self.get_colocated_sessions()
+            if colocated:
+                return colocated
 
         sessions = await self.get_sessions()
         return [s for s in sessions if s.day == day.lower()]
@@ -166,7 +169,6 @@ class DataService:
                     results.append(s)
                     break
             else:
-                # Also check the title (speaker names often in title)
                 if name_lower in s.title.lower():
                     results.append(s)
 
@@ -183,6 +185,10 @@ class DataService:
         """
         if self._parties_cache.valid and not force_refresh:
             return self._parties_cache.get()
+
+        url = self._config.parties_url
+        if not url:
+            return []
 
         try:
             parties = await self._fetch_parties()
@@ -211,12 +217,7 @@ class DataService:
         day: str | None = None,
         limit: int = 50,
     ) -> list[Session]:
-        """Get sessions suitable for scoring (filters out logistics events).
-
-        Removes registration, breaks, badge pickup, cloakroom, lunch, and
-        other non-session events — same logic as kubecon-event-scorer's
-        filter_scorable().
-        """
+        """Get sessions suitable for scoring (filters out logistics events)."""
         skip_keywords = {
             "registration",
             "breakfast",
@@ -228,10 +229,11 @@ class DataService:
             "cloakroom",
             "break",
             "solutions showcase",
+            "exhibition",
         }
         skip_categories = {"REGISTRATION", "BREAKS", "BREAK", "MEAL", "LUNCH"}
 
-        if day and day.lower() == "monday":
+        if day and day.lower() == self._config.day_names[0]:
             sessions = await self.get_colocated_sessions()
         elif day:
             sessions = await self.get_schedule_for_day(day)
@@ -251,16 +253,7 @@ class DataService:
         return scorable[:limit]
 
     async def detect_conflicts(self, session_uids: list[str]) -> list[dict]:
-        """Detect scheduling conflicts among selected sessions.
-
-        Inspired by kubecon-event-scorer's conflicts_with() method.
-
-        Args:
-            session_uids: List of session UIDs to check for conflicts.
-
-        Returns:
-            List of conflict pairs with details.
-        """
+        """Detect scheduling conflicts among selected sessions."""
         all_sessions = await self.get_sessions()
         colocated = await self.get_colocated_sessions()
         session_map = {s.uid: s for s in all_sessions + colocated}
@@ -272,7 +265,6 @@ class DataService:
             for b in selected[i + 1 :]:
                 if a.day != b.day:
                     continue
-                # Parse ISO times and check overlap
                 try:
                     a_start = datetime.fromisoformat(a.start)
                     a_end = datetime.fromisoformat(a.end)
@@ -308,48 +300,36 @@ class DataService:
         return conflicts
 
     # ------------------------------------------------------------------
-    # Static data (venue, hotels, travel)
+    # Static data accessors
     # ------------------------------------------------------------------
 
-    def get_venue(self) -> VenueInfo:
-        return VENUE
-
-    def get_hotels(self) -> list[Hotel]:
-        return HOTELS
-
-    def get_colocated_events(self) -> list[ColocatedEvent]:
-        return COLOCATED_EVENTS
-
-    def get_schedule_overview(self) -> dict:
-        return SCHEDULE_OVERVIEW
-
-    def get_airline_discounts(self) -> list[dict]:
-        return AIRLINE_DISCOUNTS
+    @property
+    def config(self) -> ConferenceConfig:
+        return self._config
 
     # ------------------------------------------------------------------
     # Internal fetch methods
     # ------------------------------------------------------------------
 
     async def _fetch_sessions(self, url: str) -> list[Session]:
-        """Fetch and parse an iCal feed."""
-        async with httpx.AsyncClient(
-            timeout=_http_timeout, follow_redirects=True
-        ) as client:
-            resp = await client.get(url, headers={"User-Agent": "kubecon-eu-mcp/0.1"})
-            resp.raise_for_status()
-            return parse_ical(resp.text)
-
-    async def _fetch_parties(self) -> list[Party]:
-        """Fetch and parse party listings."""
         async with httpx.AsyncClient(
             timeout=_http_timeout, follow_redirects=True
         ) as client:
             resp = await client.get(
-                PARTIES_URL, headers={"User-Agent": "kubecon-eu-mcp/0.1"}
+                url, headers={"User-Agent": "conference-mcp/0.1"}
+            )
+            resp.raise_for_status()
+            if "sessionize.com" in url:
+                return parse_sessionize_html(resp.text)
+            return parse_ical(resp.text)
+
+    async def _fetch_parties(self) -> list[Party]:
+        async with httpx.AsyncClient(
+            timeout=_http_timeout, follow_redirects=True
+        ) as client:
+            resp = await client.get(
+                self._config.parties_url,
+                headers={"User-Agent": "conference-mcp/0.1"},
             )
             resp.raise_for_status()
             return parse_parties_html(resp.text)
-
-
-# Module-level singleton
-data_service = DataService()

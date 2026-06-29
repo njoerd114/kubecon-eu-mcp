@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from icalendar import Calendar
 
-from kubecon_eu_mcp.models import Session, day_from_date
+from conference_mcp.models import Session, day_from_date
 
 # Pattern to extract speakers from session titles like:
 # "Talk Title - Speaker Name, Company & Speaker2, Company2"
@@ -30,12 +30,10 @@ def _extract_speakers(title: str) -> tuple[str, list[str]]:
     clean_title = match.group(1).strip()
     speaker_part = match.group(2).strip()
 
-    # Split on " & " or " ; " for multiple speakers
     raw_speakers = re.split(r"\s*[&;]\s*", speaker_part)
 
     speakers = []
     for s in raw_speakers:
-        # Take just the name (before the comma which is typically title/org)
         name = s.split(",")[0].strip()
         if name and len(name) > 1:
             speakers.append(name)
@@ -52,7 +50,6 @@ def _to_iso(dt_val) -> str:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.isoformat()
-    # date-only (all-day event)
     return dt.isoformat()
 
 
@@ -67,14 +64,7 @@ def _to_datetime(dt_val) -> datetime | None:
 
 
 def parse_ical(ical_text: str) -> list[Session]:
-    """Parse an iCal string into a list of Session objects.
-
-    Args:
-        ical_text: Raw iCal (.ics) content from sched.com.
-
-    Returns:
-        List of Session objects sorted by start time.
-    """
+    """Parse an iCal string into a list of Session objects."""
     cal = Calendar.from_ical(ical_text)
     sessions: list[Session] = []
 
@@ -108,17 +98,7 @@ def parse_ical(ical_text: str) -> list[Session]:
         if start_dt is None:
             continue
 
-        # Skip utility events
-        title_lower = raw_title.lower().strip()
-        if any(skip in title_lower for skip in _SKIP_CATEGORIES):
-            # Still include them but mark as utility
-            category = category or "Logistics"
-
-        # Extract speakers from title
         clean_title, speakers = _extract_speakers(raw_title)
-
-        # Clean up location (remove ", Amsterdam, Netherlands" suffix)
-        location = re.sub(r",\s*Amsterdam,\s*Netherlands\s*$", "", location)
 
         session = Session(
             uid=uid,
@@ -127,13 +107,12 @@ def parse_ical(ical_text: str) -> list[Session]:
             end=_to_iso(dtend),
             day=day_from_date(start_dt),
             location=location,
-            description=description[:2000],  # Cap description length
+            description=description[:2000],
             category=category,
             url=url,
             speakers=speakers,
         )
         sessions.append(session)
 
-    # Sort by start time
     sessions.sort(key=lambda s: s.start)
     return sessions

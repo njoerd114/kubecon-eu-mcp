@@ -1,8 +1,4 @@
-"""Shared fixtures for MCP server tests.
-
-Provides mock session/party data and patches the data service so tools
-never hit the network during tests.
-"""
+"""Shared fixtures for MCP server tests."""
 
 from __future__ import annotations
 
@@ -10,12 +6,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from kubecon_eu_mcp.models import Session, Party
+from conference_mcp.conferences import get_conference
+from conference_mcp.data_service import DataService
+from conference_mcp.models import Session, Party
+from conference_mcp.server import create_server
 
-
-# ---------------------------------------------------------------------------
-# Mock data
-# ---------------------------------------------------------------------------
 
 MOCK_SESSIONS: list[Session] = [
     Session(
@@ -119,24 +114,19 @@ MOCK_PARTIES: list[Party] = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+@pytest.fixture
+def mcp():
+    with patch.object(
+        DataService, "get_sessions", new_callable=AsyncMock
+    ) as mock_sess, patch.object(
+        DataService, "get_colocated_sessions", new_callable=AsyncMock
+    ) as mock_colo, patch.object(
+        DataService, "get_parties", new_callable=AsyncMock
+    ) as mock_parties:
+        mock_sess.return_value = MOCK_SESSIONS
+        mock_colo.return_value = MOCK_COLOCATED_SESSIONS
+        mock_parties.return_value = MOCK_PARTIES
 
-
-@pytest.fixture(autouse=True)
-def _patch_data_service(monkeypatch):
-    """Patch all data_service network methods so tests never hit the internet."""
-    from kubecon_eu_mcp.data_service import data_service
-
-    monkeypatch.setattr(
-        data_service, "get_sessions", AsyncMock(return_value=MOCK_SESSIONS)
-    )
-    monkeypatch.setattr(
-        data_service,
-        "get_colocated_sessions",
-        AsyncMock(return_value=MOCK_COLOCATED_SESSIONS),
-    )
-    monkeypatch.setattr(
-        data_service, "get_parties", AsyncMock(return_value=MOCK_PARTIES)
-    )
+        config = get_conference("kubecon-eu-2026")
+        server = create_server(config)
+        yield server
